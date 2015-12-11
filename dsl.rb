@@ -1,3 +1,6 @@
+require 'rack'
+require 'json'
+
 module DSL
   def self.included(base)
     # base.send :include, InstanceMethods
@@ -5,13 +8,35 @@ module DSL
   end
 
   module ClassMethods
+    def call(env)
+
+      route_handler = new
+      req = Rack::Request.new env
+
+        routes_and_handler = route_handler.all_routes
+
+        path = req.path
+        method_append = path.match(/^[\/]?(.*)[\/]?/)
+
+        method_called = req.request_method.downcase.to_sym
+
+        methods_allowed = routes_and_handler.keys
+        defined_method = "#{method_called}_#{$1}"
+
+        if methods_allowed.include?(method_called) && route_handler.respond_to?(defined_method)
+          route_handler.send(defined_method)
+        else
+          route_handler.invalid_route
+        end
+    end
+
     def serve(&block)
       method_to_call = new
       method_to_call.instance_eval(&block)
     end
 
 
-    def router_reg(route_param, method_called)
+    def router_reg(route_param, method_called, &_block)
       path = route_param[:path]
       action_defined = route_param[:use]
 
@@ -19,7 +44,9 @@ module DSL
       action = "#{method_called}_#{$1}"
 
       define_method action do #|arg|
-        if action_defined
+        if block_given?
+          response(yield)
+        elsif action_defined
           resp = action_to_call(action_defined)
           response(resp)
         elsif action == 'get_' || action == 'post_'
@@ -63,13 +90,25 @@ module DSL
     if [:get, :post].include? method_name
       args = manipulate(args)
 
-      self.class.router_reg(args, method_name)
+      self.class.router_reg(args, method_name, &_block)
 
       register_routes(method_name, args)
       all_routes
     else
       puts 'I was here'
     end
+  end
+
+  def invalid_route message: 'Invalid URL Specified',status: 404
+    Rack::Response.new(message, status)
+  end
+
+  def response(doc)
+    resp = Rack::Response.new
+    resp.write(doc)
+    resp['Content-Type'] = 'application/json'
+    resp.status = 200
+    resp.finish
   end
 
   def manipulate(_args)
@@ -92,51 +131,3 @@ module DSL
     route
   end
 end
-
-class Oreoluwa
-  def action
-    # 'Oreoluwa is awesome'
-    {kool: :right, awesome: :amazing}.to_json
-  end
-end
-
-
-class Cent
-  def whatever
-    {president: :amity, awesome: :cool}.to_json
-  end
-end
-
-class Kay
-  def coolio
-    {jumper: :yeah, kay: :kode}.to_json
-  end
-end
-
-class Daisi
-  def yes
-    {this: :is, it: :yes}.to_json
-  end
-end
-
-
-    # routes.each do |route|
-    # end
-
-        #   route[arg]
-        # route
-        # puts 'This is cool'
-# puts route
-# @@methods_and_routes[method].flatten
-
-# def get(*args, &block)
-#   # register_routes()
-#   puts "I called get"
-# end
-#
-# def post(*args, &block)
-#   puts args
-# end
-# puts args
-# send(:register_routes, args, &block)
-# end

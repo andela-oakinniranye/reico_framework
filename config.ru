@@ -1,7 +1,5 @@
-require 'rack'
-require 'json'
 require 'pry'
-require './serv'
+require './reico'
 
 app = Proc.new{ |env|
   [200, {'Content-Type' => 'application/json'}, [{mail: 'application'}.to_json]]
@@ -14,9 +12,10 @@ class RoutingError < NameError
 end
 
 Reico.serve do
-  # get '/', '/game', '/amazing' do
+  get '/oreoluwa' do
+    {can: :do, amazing: :things}.to_json
+  end
 
-  # end
   get '/', to: 'oreoluwa#action'
 
   get '/cent', to: 'cent#whatever'
