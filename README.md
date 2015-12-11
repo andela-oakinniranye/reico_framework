@@ -26,6 +26,14 @@ To define your routes, all you have to do is:
 
     get '/path2' do
       #evaluate path2 here
+        {evaluate: :without, controller: :action}.to_json
+    end
+  end
+
+
+  class Controller
+    def action
+      {server: :running}.to_json
     end
   end
 ```
